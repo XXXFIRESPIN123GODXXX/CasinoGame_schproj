@@ -1,50 +1,7 @@
 #include <iostream>
 #include <random>
 
-int DiceRoll(int aLowestSide, int aHighestSide);
-bool PlayAgain();
-void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice);
-
-
-
-
-//add game2
-
-//add balance and betting system
-
-//gameover if no balance
-
-
-int main()
-{
-    std::cout << "Welcome to the Casino! My name is D6 and I'm your host for the evening.\n\n";
-    int choice{};
-
-    while (choice < 1 || choice > 3)
-    {
-        std::cout << "What would you like to do?\n1: Play Guess The Number\n2: Play Even/Odd\n3: Exit\n";
-        std::cin >> choice;
-        std::cin.clear();
-        std::cin.ignore(10000, '\n');
-        system("cls");
-    }
-
-    switch (choice)
-    {
-    case 1:
-        DiceGuessGame(1, 6, 2);
-        break;
-    case 2:
-        std::cout << "Not implemented yet.\n";
-        break;
-    case 3:
-        std::cout << "Goodbye!\n\n";
-        system("pause");
-        break;
-    }
-    return 0;
-}
-
+int balance{ 65 };
 
 
 int DiceRoll(int aLowestSide, int aHighestSide)
@@ -54,6 +11,31 @@ int DiceRoll(int aLowestSide, int aHighestSide)
     std::uniform_int_distribution<int> uniform_dist(aLowestSide, aHighestSide);
     int roll{ uniform_dist(el) };
     return roll;
+}
+
+int BetCheckpoint() {
+    std::cout << "Enter wager: \n";
+    std::cin >> wager;
+    std::cin.clear();
+    std::cin.ignore(10000, '\n');
+
+    if (wager < 1)
+    {
+        system("cls");
+        std::cout << "You have to bet something, no fun otherwise!\n";
+    }
+    else if (wager > currentBalance)
+    {
+        system("cls");
+        std::cout << "You're a little short on cash for that.\n";
+
+    }
+    else if (wager == currentBalance)
+    {
+        system("cls");
+        std::cout << "ALL IN?\n";
+        break;
+    }
 }
 
 bool PlayAgain()
@@ -75,9 +57,12 @@ bool PlayAgain()
     }
 }
 
-void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice)
+void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice, int aBalance)
 {
     int choice{};
+    int currentBalance{ aBalance };
+    int wager{};
+
     while (choice < 1 || choice > 3)
     {
         std::cout << "Welcome to Guess the Number! Do you need a tutorial on how to play?\n1: Yes\n2: No\n3: Go Back\n";
@@ -92,7 +77,7 @@ void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice)
     case 1:
         system("cls");
         std::cout << "The rules are simple!\n"
-            << "I'm going to roll two six-sided dice, and if you guess their "
+            << "First, choose the amount you wish to bet.\nI'm then going to roll two six-sided dice, and if you guess their "
             << "combined total.....you'll win a prize!\nWhy don't you give it a try!\n\n";
         break;
     case 2:
@@ -105,44 +90,108 @@ void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice)
     }
     do
     {
-
-        std::cout << "Enter a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice << ":""\n\n";
-        int userInput{};
-        std::cin >> userInput;
-        if (std::cin.fail())
+        while (wager > currentBalance || wager < currentBalance)
         {
-            std::cin.clear();
-            std::cin.ignore(10000, '\n');
-            system("cls");
-            std::cout << "That doesn't look like a number to me.......\n\n";
-        }
-        else
-        {
-            system("cls");
-            int rollMin{ aMinRoll }, rollMax{ aMaxRoll };
-            int amountOfRolls{ anAmountOfDice };
-            int roll1{ DiceRoll(rollMin,rollMax) };
-            int roll2{ DiceRoll(rollMin,rollMax) };
-            int rollTotal{ roll1 + roll2 };
 
-            if (userInput <= rollMax * amountOfRolls && userInput >= rollMin * amountOfRolls && rollTotal != userInput)
-            {
-                std::cout << "You entered ..." << userInput << "!\n\n";
-                std::cout << "And the dice rolled...\n" << roll1 << ".." << '\n' << roll2 << ".." << "\nfor a total of " << rollTotal << "!\n\n";
-                std::cout << "Better luck next time!\n\n";
-            }
-            else if (rollTotal == userInput)
-            {
-                std::cout << "You entered ..." << userInput << "!\n\n";
-                std::cout << "And the dice rolled...\n" << roll1 << ".." << '\n' << roll2 << ".." << "\nfor a total of " << rollTotal << "!\n\n";
-                std::cout << "Conratulations!\n\nYou won a...croissant? Yummy!\n\n";
-            }
-            else if (userInput > rollMax * amountOfRolls || userInput < rollMin * amountOfRolls)
-            {
-                std::cout << "Hey... It has to be a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice
-                    << "... Give it another try!\n\n";
+            else {
+                std::cout << "Enter a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice << ":""\n\n";
+                int userInput{};
+                std::cin >> userInput;
+                if (std::cin.fail())
+                {
+                    std::cin.clear();
+                    std::cin.ignore(10000, '\n');
+                    system("cls");
+                    std::cout << "That doesn't look like a number to me.......\n\n";
+                }
+                else
+                {
+                    system("cls");
+                    int rollMin{ aMinRoll }, rollMax{ aMaxRoll };
+                    int amountOfRolls{ anAmountOfDice };
+                    int roll1{ DiceRoll(rollMin,rollMax) };
+                    int roll2{ DiceRoll(rollMin,rollMax) };
+                    int rollTotal{ roll1 + roll2 };
+
+                    if (userInput <= rollMax * amountOfRolls && userInput >= rollMin * amountOfRolls && rollTotal != userInput)
+                    {
+                        std::cout << "You entered ..." << userInput << "!\n\n";
+                        std::cout << "And the dice rolled...\n" << roll1 << ".." << '\n' << roll2 << ".." << "\nfor a total of " << rollTotal << "!\n\n";
+                        std::cout << "You lost " << wager << " Gil...\n";
+                        std::cout << "Better luck next time!\n\n";
+                        currentBalance -= wager;
+                        std::cout << "Current balance is: " << currentBalance << " Gil\n";
+                    }
+                    else if (rollTotal == userInput)
+                    {
+                        std::cout << "You entered ..." << userInput << "!\n\n";
+                        std::cout << "And the dice rolled...\n" << roll1 << ".." << '\n' << roll2 << ".." << "\nfor a total of " << rollTotal << "!\n\n";
+                        std::cout << "Conratulations!\n\nYou won " << wager << " Gil!\n\n";
+                        currentBalance += wager;
+                        std::cout << "Current balance is: " << currentBalance << " Gil\n";
+                    }
+                    else if (userInput > rollMax * amountOfRolls || userInput < rollMin * amountOfRolls)
+                    {
+                        std::cout << "Hey... It has to be a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice
+                            << "... Give it another try!\n\n";
+                    }
+                }
             }
         }
+
     } while (PlayAgain());
 
 }
+
+
+
+
+
+
+
+int main()
+{
+    std::cout << "Welcome to the Casino! My name is D6 and I'm your host for the evening.\n\n";
+    int choice{};
+
+    while (choice < 1 || choice > 3)
+    {
+        std::cout << "Current balance: " << balance << " Gil" << "\n\n";
+        std::cout << "What would you like to do?\n1: Play Guess The Number\n2: Play Even/Odd\n3: Exit\n";
+        std::cin >> choice;
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+        system("cls");
+    }
+
+    switch (choice)
+    {
+    case 1:
+        DiceGuessGame(1, 6, 2, balance);
+        break;
+    case 2:
+        std::cout << "Not implemented yet.\n";
+        break;
+    case 3:
+        std::cout << "Goodbye!\n\n";
+        system("pause");
+        break;
+    }
+    return 0;
+}
+
+
+
+
+//add game2
+
+//add balance and betting system
+//global balance
+//ask wager - globalBalance 
+//win lose --> wager +- globalBalance
+//wronginput -> retry chance instead of play again
+
+//gameover if no balance
+
+
+
