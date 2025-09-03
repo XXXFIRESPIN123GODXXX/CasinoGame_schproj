@@ -171,6 +171,7 @@ void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice, int aBalance)
                 std::cout << "Better luck next time!\n\n";
                 currentBalance -= amountBet;
                 std::cout << "Current balance is: " << currentBalance << " Gil\n";
+                system("pause");
             }
             else if (rollTotal == userInput)
             {
