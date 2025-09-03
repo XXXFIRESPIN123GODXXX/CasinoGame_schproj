@@ -1,21 +1,16 @@
 #include <iostream>
 #include <random>
 
-int balance{ 65 };
-
 int DiceRoll(int aLowestSide, int aHighestSide);
 int BetCheckpoint(int aBalance);
 bool PlayAgain();
 void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice, int aBalance);
 
-
-
-
-
 int main()
 {
     std::cout << "Welcome to the Casino! My name is D6 and I'm your host for the evening.\n\n";
     int choice{};
+    int balance{ 65 };
 
     while (choice < 1 || choice > 3)
     {
@@ -43,18 +38,21 @@ int main()
     return 0;
 }
 
+//wronginput -> inputagain for current round instead of restartíng round and wager
+//---maybe use a while switch?   <---------------------------]
+//                                                           I
+//if play again NO ---> return to menu                       I
+//---could be bool while yes stay in func else end func <----]
+//------could add call to main after bool at func end
 
+//return ingame balance to global balance when returning to menu
+//---maybe set wager before game(in main) and game returns win 0/1(bool?) if 0/1 wager+-balance
 
+//make "response" own function to reuse in both games: (value entered, win/loss, gold won/lost, current balance)
 
 //add game2
 
-//add balance and betting system
-//global balance
-//ask wager - globalBalance 
-//win lose --> wager +- globalBalance
-//wronginput -> retry chance instead of play again
 
-//gameover if no balance
 
 int DiceRoll(int aLowestSide, int aHighestSide)
 {
@@ -189,6 +187,13 @@ void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice, int aBalance)
                 std::cout << "Hey... It has to be a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice
                     << "... Give it another try!\n\n";
             }
+        }
+        if (currentBalance < 1)
+        {
+            system("cls");
+            std::cout << "You're out of gil! Get out of here chump!\n\nGAME OVER\n";
+            system("pause");
+            return;
         }
     } while (PlayAgain());
 }
