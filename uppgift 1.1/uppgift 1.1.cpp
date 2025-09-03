@@ -13,28 +13,37 @@ int DiceRoll(int aLowestSide, int aHighestSide)
     return roll;
 }
 
-int BetCheckpoint() {
-    std::cout << "Enter wager: \n";
-    std::cin >> wager;
-    std::cin.clear();
-    std::cin.ignore(10000, '\n');
+int BetCheckpoint(int aBalance)
+{
+    int wager{};
 
-    if (wager < 1)
+    while (wager < 1 || wager > aBalance)
     {
-        system("cls");
-        std::cout << "You have to bet something, no fun otherwise!\n";
-    }
-    else if (wager > currentBalance)
-    {
-        system("cls");
-        std::cout << "You're a little short on cash for that.\n";
+        std::cout << "Enter wager: \n";
+        std::cin >> wager;
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
 
+        if (wager < 1)
+        {
+            system("cls");
+            std::cout << "You have to bet something, no fun otherwise!\n";
+        }
+        else if (wager > aBalance)
+        {
+            system("cls");
+            std::cout << "You're a little short on cash for that.\n";
+        }
     }
-    else if (wager == currentBalance)
+
+    if (wager == aBalance)
     {
         system("cls");
         std::cout << "ALL IN?\n";
-        break;
+    }
+    else
+    {
+        return wager;
     }
 }
 
