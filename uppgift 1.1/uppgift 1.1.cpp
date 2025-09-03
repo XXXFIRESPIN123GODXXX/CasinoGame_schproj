@@ -39,16 +39,14 @@ int main()
 }
 
 //wronginput -> inputagain for current round instead of restartíng round and wager
-//---maybe use a while switch?   <---------------------------]
-//                                                           I
-//if play again NO ---> return to menu                       I
-//---could be bool while yes stay in func else end func <----]
-//------could add call to main after bool at func end
+//---maybe use a while switch? between line(145-186). 4 cases for notNumber, notWithinRange, win,lose(win/lose can be case:true/false callign bool function)
 
 //return ingame balance to global balance when returning to menu
 //---maybe set wager before game(in main) and game returns win 0/1(bool?) if 0/1 wager+-balance
 
-//make "response" own function to reuse in both games: (value entered, win/loss, gold won/lost, current balance)
+//make "responses"(line 170,line 179) its own function for reusing in both games: (value entered, win/loss, gold won/lost, current balance)
+//---split DiceGuessGame into intro and GuessGameLogic(line 145-186)
+//------guessgame main function calls (logic), (logic) calls "responses"
 
 //add game2
 
@@ -82,7 +80,7 @@ int BetCheckpoint(int aBalance)
         else if (wager > aBalance)
         {
             system("cls");
-            std::cout << "You're a little short on cash for that.\n";
+            std::cout <<"Don't think you've got enough cash for that!\n";
         }
     }
 
@@ -191,9 +189,11 @@ void DiceGuessGame(int aMinRoll, int aMaxRoll, int anAmountOfDice, int aBalance)
         if (currentBalance < 1)
         {
             system("cls");
-            std::cout << "You're out of gil! Get out of here chump!\n\nGAME OVER\n";
+            std::cout << "You're out of gil! Get out of here chump!\n\n...the guards kicked you out of the casino!\n\nGAME OVER\n";
             system("pause");
             return;
         }
     } while (PlayAgain());
+
+    main();
 }
