@@ -277,8 +277,8 @@ void OddEvenGame(int aMinRoll, int aMaxRoll, int aBalance)
             {
                 system("cls");
                 OddEvenGameDiceRoll(roll1, roll2, betChoice);
-                std::cout << "Conratulations!\n\nYou won " << amountBet << " Gil!\n\n";
-                currentBalance += amountBet;
+                std::cout << "Conratulations!\n\nYou won " << amountBet * 2 << " Gil!\n\n";
+                currentBalance += amountBet*2;
                 std::cout << "Current balance is: " << currentBalance << " Gil\n";
             }
             else if (betChoice == 1 && roll1 % 2 == 0 && roll2 % 2 == 0)
@@ -293,8 +293,8 @@ void OddEvenGame(int aMinRoll, int aMaxRoll, int aBalance)
             {
                 system("cls");
                 OddEvenGameDiceRoll(roll1, roll2, betChoice);
-                std::cout << "Conratulations!\n\nYou won " << amountBet << " Gil!\n\n";
-                currentBalance += amountBet;
+                std::cout << "Conratulations!\n\nYou won " << amountBet * 2 << " Gil!\n\n";
+                currentBalance += amountBet * 2;
                 std::cout << "Current balance is: " << currentBalance << " Gil\n";
             }
             else if (betChoice == 2 && roll1 % 2 != 0 && roll2 % 2 != 0)
