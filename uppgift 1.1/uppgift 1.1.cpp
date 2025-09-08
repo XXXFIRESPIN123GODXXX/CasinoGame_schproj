@@ -1,34 +1,33 @@
 #include <iostream>
 #include <random>
+#include "main.h"
 
 int globalBalance{ 50 };
 int globalCashFlowCounter[3]{};
-bool globalTableBanCheck[3]{false,false,false};
+bool globalTableBanCheck[3]{ false,false,false };
 
 char globalHistory[5] = { ' ', ' ', ' ', ' ', ' ' };
 int globalHistorySlot = 0;
 
 
-int DiceRoll(int aLowestSide, int aHighestSide);
-int BetCheckpoint(int aBalance);
-bool PlayAgain();
-void ChosenOddEven(int betChoice);
-void OddEvenGamePrintResult(int rollA, int rollB, int inputFromUser);
-void OddEvenGame(int aMinRoll, int aMaxRoll);
-void OddEvenGameIntro();
-void DiceGuessGame();
-void DiceGuessGameLogic(int aMinRoll, int aMaxRoll, int anAmountOfDice);
-void DiceGameIntro();
-void Lobby();
-void PostTutorialPrompt();
-void GameOver();
-void SaveResult(char aRoundResult);
-void ShowResults();
+//0.0fix infinite loop on game exit (not sure how it happens yet, cant reproduce consistently)
+//---try to not call main/lobby from within functions called by main/lobby (maybe enums?) (encompass entire lobby in while?)
 
-//add show playhistory after each round, + add menubutton to show playhistory
-//5 slot array, assign in consecutive order 1 2 3 4 5 1 2 3 4 5 and so on
+//1.0remove global variables, use structs, references, functions or namespaces instead
+//---struct for wallet? startingbal, betamt, endbal, per game?
+//---struct for pergame winnings tracker? per game.
+
+//2.0implement enums (prefer scoping them within namespaces or classes for less pollution)for ex. choice based prompts (menus, yes/no)
+//enumerated types related to a class inside the scope region of the class
+
+//3.0remove magic numbers for consts
+//---through use of f.ex enums (enums are implicitly constexpr)
+
+//4.0divide functions into separate files and headers
 
 //add game3 blackjack? infinite deck to skip counting amountof each card
+
+//add game4 higher or lower?
 
 int main()
 {
@@ -203,6 +202,7 @@ void OddEvenGameIntro()
 void ChosenOddEven(int betChoice)
 {
     bool chosenEven = true;
+
     if (betChoice == 1)
     {
         chosenEven = false;
