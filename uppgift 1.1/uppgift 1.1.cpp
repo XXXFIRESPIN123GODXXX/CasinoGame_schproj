@@ -1,108 +1,522 @@
 #include <iostream>
 #include <random>
-#include "main.h"
 
-int globalBalance{ 50 };
-int globalCashFlowCounter[3]{};
-bool globalTableBanCheck[3]{ false,false,false };
+struct Wallet
+{
+    int balance{ 50 };
+};
 
-char globalHistory[5] = { ' ', ' ', ' ', ' ', ' ' };
-int globalHistorySlot = 0;
+struct GameStats
+{
+    int CashFlowCount{ 0 };
+    bool banned{ false };
+};
+
+namespace CasinoConfig
+{
+    constexpr int inputBufferSize{ 10000 };
+    constexpr int gameOverCriteria{ 0 };
+    constexpr int minimumBetAmount{ 5 };
+}
+namespace OddEvenConfig
+{
+    constexpr int winLimit{ 125 };
+    constexpr int diceMinRoll{ 1 };
+    constexpr int diceMaxRoll{ 6 };
+    constexpr int payoutRatio{ 2 };
+    constexpr int winnerMsgThreshhold{ 80 };
+    constexpr int loserMsgThreshhold{ -40 };
+}
+namespace DiceGuessConfig
+{
+    constexpr int winLimit{ 175 };
+    constexpr int diceMinRoll{ 1 };
+    constexpr int diceMaxRoll{ 6 };
+    constexpr int amtOfDice{ 2 };
+    constexpr int payoutRatio{ 9 };
+    constexpr int winnerMsgThreshHold{ 70 };
+    constexpr int loserMsgThreshHold{ -40 };
+}
+
+struct WinLossHistory
+{
+    static constexpr int historySize{ 5 };
+
+    char playHistory[historySize] = { ' ', ' ', ' ', ' ', ' ' };
+    int historySlot = 0;
+
+    void SaveResult(char aRoundResult)
+    {
+        playHistory[historySlot] = aRoundResult;
+        historySlot = (historySlot + 1) % historySize;
+    }
+
+    void ShowResults()
+    {
+        std::cout << "Recent round history\n\n";
+
+        for (int i{ 0 }; i < 5; ++i)
+        {
+            std::cout << "Round " << i + 1 << ": ";
+            if (playHistory[i] == ' ')
+            {
+                std::cout << "-----\n";
+            }
+            else if (playHistory[i] == 'W')
+            {
+                std::cout << "Won\n";
+            }
+            else if (playHistory[i] == 'L')
+            {
+                std::cout << "Lost";
+                std::cout << '\n';
+            }
+        }
+    }
+};
 
 
-//0.0fix infinite loop on game exit (not sure how it happens yet, cant reproduce consistently)
-//---try to not call main/lobby from within functions called by main/lobby (maybe enums?) (encompass entire lobby in while?)
+int DiceRoll(int aLowestSide, int aHighestSide);
+int BetCheckpoint(int aBalance);
+bool PlayAgain();
+void OddEvenGamePrintResult(int aRoll, int aRoll2, int anInputFromUser);
+void OddEvenGame(GameStats& gameStats, Wallet& wallet, WinLossHistory& history);
+bool OddEvenGameIntro(GameStats& gameStats);
+void OddEvenGameLogic(int aMinRoll, int aMaxRoll, GameStats& oddEvenStats, Wallet& wallet, WinLossHistory& history);
+void DiceGuessGame(GameStats& gameStats, Wallet& wallet, WinLossHistory& history);
+void DiceGuessPrintResult(int userInput, int roll1, int roll2, int rollTotal);
+void DiceGuessGameLogic(int aMinRoll, int aMaxRoll, int anAmountOfDice, GameStats& diceGameStats, Wallet& wallet, WinLossHistory& history);
+bool DiceGuessIntro(GameStats& gameStats);
+void Lobby(Wallet& wallet, WinLossHistory& history, GameStats& oddEvenStats, GameStats& diceGuessStats);
+bool PostTutorialPrompt();
+void GameOver();
 
-//1.0remove global variables, use structs, references, functions or namespaces instead
-//---struct for wallet? startingbal, betamt, endbal, per game?
-//---struct for pergame winnings tracker? per game.
+
+//remove glob alhistory for struct, reference, function, namespace
 
 //2.0implement enums (prefer scoping them within namespaces or classes for less pollution)for ex. choice based prompts (menus, yes/no)
 //enumerated types related to a class inside the scope region of the class
-
-//3.0remove magic numbers for consts
-//---through use of f.ex enums (enums are implicitly constexpr)
+//enums for choice switches
 
 //4.0divide functions into separate files and headers
 
-//add game3 blackjack? infinite deck to skip counting amountof each card
+//add game3 throw dice, dont even ask for input bigger num wins
 
 //add game4 higher or lower?
 
 int main()
 {
-    Lobby();
+    Wallet wallet;
+    GameStats oddEvenGame;
+    GameStats diceGuessGame;
+    WinLossHistory history;
+
+    Lobby(wallet, history, oddEvenGame, diceGuessGame);
+
     return 0;
 }
 
-void Lobby()
+void Lobby(Wallet& wallet, WinLossHistory& history, GameStats& oddEvenStats, GameStats& diceGuessStats)
 {
     int choice{};
+    bool showMenu{ true };
 
-    while (choice < 1 || choice > 4)
+    while (showMenu && wallet.balance > CasinoConfig::gameOverCriteria)
     {
         std::cout << "Welcome to the Casino! My name is D6 and I'm your host for the evening.\n\n"
-                  << "Current balance: " << globalBalance << " Gil" << "\n\n"
-                  << "What would you like to do?\n1: Play Guess The Number\n2: Play Even/Odd\n"
-                  << "3: Show Win/Loss History (The 5 most recent rounds played)\n4: Exit\n";
+            << "Current balance: " << wallet.balance << " Gil" << "\n\n"
+            << "What would you like to do?\n1: Play Guess The Number\n2: Play Even/Odd\n"
+            << "3: Show Win/Loss History (The 5 most recent rounds played)\n4: Exit\n";
         std::cin >> choice;
         std::cin.clear();
-        std::cin.ignore(10000, '\n');
+        std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
         system("cls");
-    }
 
-    switch (choice)
-    {
-    case 1:
-        DiceGuessGame();
-        break;
-    case 2:
-        OddEvenGame(1, 6);
-        break;
-    case 3:
-        ShowResults();
-        system("pause");
-        system("cls");
-        Lobby();
-        break;
-    case 4:
-        std::cout << "Thanks for playing!\n\nYou left the casino with " << globalBalance << " Gil in your pocket.\n";
-        system("pause");
-        break;
+        switch (choice)
+        {
+        case 1:
+            DiceGuessGame(diceGuessStats, wallet, history);
+            break;
+        case 2:
+            OddEvenGame(oddEvenStats, wallet, history);
+            break;
+        case 3:
+            history.ShowResults();
+            system("pause");
+            system("cls");
+            break;
+        case 4:
+            std::cout << "Thanks for playing!\n\nYou left the casino with " << wallet.balance << " Gil in your pocket.\n";
+            showMenu = false;
+            system("pause");
+            break;
+        }
     }
-
 }
 
-int DiceRoll(int aLowestSide, int aHighestSide)
+void OddEvenGame(GameStats& oddEvenStats, Wallet& wallet, WinLossHistory& history)
 {
-    std::random_device rng;
-    std::mt19937 el(rng());
-    std::uniform_int_distribution<int> uniform_dist(aLowestSide, aHighestSide);
-    int roll{ uniform_dist(el) };
-    return roll;
+    if (oddEvenStats.banned)
+    {
+        std::cout << "The guards won't let you in! You could try playing at another table...\n\n";
+        system("pause");
+        system("cls");
+        return;
+    }
+
+    if (!OddEvenGameIntro(oddEvenStats))
+    {
+        return;
+    }
+
+    do
+    {
+        OddEvenGameLogic(OddEvenConfig::diceMinRoll, OddEvenConfig::diceMaxRoll, oddEvenStats, wallet, history);
+
+        if (oddEvenStats.CashFlowCount > OddEvenConfig::winLimit)
+        {
+            std::cout << "Uh-oh, you've caught the attention of the pit boss... The guards \"kindly\" escort you out out of the room\n\n";
+            system("pause");
+            system("cls");
+            oddEvenStats.banned = true;
+            return;
+        }
+
+        if (wallet.balance <= CasinoConfig::gameOverCriteria)
+        {
+            GameOver();
+            return;
+        }
+
+    } while (PlayAgain());
+
+    return;
+}
+bool OddEvenGameIntro(GameStats& oddEvenStats)
+{
+    if (oddEvenStats.CashFlowCount > OddEvenConfig::winnerMsgThreshhold)
+    {
+        std::cout << "You again? Bah...Welcome...\n";
+    }
+    else if (oddEvenStats.CashFlowCount < OddEvenConfig::loserMsgThreshhold)
+    {
+        std::cout << "Back for more? Never know when you'll strike it big hehe..\n";
+    }
+    else
+    {
+        std::cout << "Welcome to Odd or Even!\n";
+    }
+    int menuChoice{};
+
+    while (menuChoice < 1 || menuChoice > 3)
+    {
+        std::cout << "Do you need a tutorial on how to play?\n1: Yes\n2: No\n3: Go Back\n";
+        std::cin >> menuChoice;
+        std::cin.clear();
+        std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
+        system("cls");
+    }
+
+    switch (menuChoice)
+    {
+    case 1:
+    {
+        system("cls");
+        std::cout << "Very well!\n"
+            << "Once the bets are placed I'm going to roll two six-sided dice and"
+            << " you'll have to guess whether BOTH of the dice will roll odd or even numbers.\n"
+            << "Guess correctly and you win! "
+            << "However...if the dice happen to roll both an even AND an odd number... the house wins regardless of your choice!\n"
+            << "It's easier than you think, give it a try!\n\nThis game has a payout of 3:1.\n\n";
+        if (!PostTutorialPrompt())
+        {
+            return false;
+        }
+        return true;
+    }
+    case 2:
+    {
+        system("cls");
+        std::cout << "Very well! Please, place your bet to commence the game.\n\n";
+        return true;
+    }
+    case 3:
+    {
+        return false;
+    }
+    }
+    return true;
+}
+void OddEvenGamePrintResult(int aRoll, int aRoll2, int anInputFromUser)
+{
+    bool chosenEven = true;
+
+    if (anInputFromUser == 1)
+    {
+        chosenEven = false;
+    }
+
+    if (chosenEven)
+    {
+        std::cout << "You bet on the dice rolling even!\n";
+    }
+    else if (!chosenEven)
+    {
+        std::cout << "You bet on the dice rolling odd!\n";
+    }
+    std::cout << "\nThe dice rolled...\n" << aRoll << ".." << '\n' << aRoll2 << ".." << "\n\n";
+}
+void OddEvenGameLogic(int aMinRoll, int aMaxRoll, GameStats& oddEvenStats, Wallet& wallet, WinLossHistory& history)
+{
+    int amountBet{ BetCheckpoint(wallet.balance) };
+    char result{};
+    int betChoice{};
+
+    while (true)
+    {
+        std::cout << "\nWhat will you be betting on?\n1: Odd Dice\n2: Even Dice\n";
+        std::cin >> betChoice;
+        if (std::cin.fail() || betChoice < 1 || betChoice > 2)
+        {
+            std::cin.clear();
+            std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
+            system("cls");
+            std::cout << "That's not a valid choice.\n";
+            continue;
+        }
+
+        const int rollMin{ aMinRoll }, rollMax{ aMaxRoll };
+        const int roll1{ DiceRoll(rollMin,rollMax) };
+        const int roll2{ DiceRoll(rollMin,rollMax) };
+        const bool roll1IsEven = (roll1 % 2 == 0);
+        const bool roll2IsEven = (roll2 % 2 == 0);
+        const bool roll1IsOdd = !roll1IsEven;
+        const bool roll2IsOdd = !roll2IsEven;
+
+        if (betChoice == 1 && roll1IsOdd && roll2IsOdd)
+        {
+            system("cls");
+            OddEvenGamePrintResult(roll1, roll2, betChoice);
+            std::cout << "Conratulations! You won " << amountBet * OddEvenConfig::payoutRatio + amountBet << " Gil!\n\n";
+            wallet.balance += amountBet * OddEvenConfig::payoutRatio;
+            oddEvenStats.CashFlowCount += amountBet * OddEvenConfig::payoutRatio;
+            result = 'W';
+        }
+        else if ((betChoice == 1 && roll1IsEven && roll2IsEven) || (betChoice == 2 && roll1IsOdd && roll2IsOdd))
+        {
+            system("cls");
+            OddEvenGamePrintResult(roll1, roll2, betChoice);
+            std::cout << "You lost!\n\n";
+            wallet.balance -= amountBet;
+            oddEvenStats.CashFlowCount -= amountBet;
+            result = 'L';
+        }
+        else if (betChoice == 2 && roll1IsEven && roll2IsEven)
+        {
+            system("cls");
+            OddEvenGamePrintResult(roll1, roll2, betChoice);
+            std::cout << "Conratulations! You won " << amountBet * OddEvenConfig::payoutRatio + amountBet << " Gil!\n\n";
+            wallet.balance += amountBet * OddEvenConfig::payoutRatio;
+            oddEvenStats.CashFlowCount += amountBet * OddEvenConfig::payoutRatio;
+            result = 'W';
+        }
+        else
+        {
+            system("cls");
+            OddEvenGamePrintResult(roll1, roll2, betChoice);
+            std::cout << "Both odd and even! You lost!\n";
+            wallet.balance -= amountBet;
+            oddEvenStats.CashFlowCount -= amountBet;
+            result = 'L';
+        }
+
+        std::cout << "Current balance is: " << wallet.balance << " Gil\n\n";
+        history.SaveResult(result);
+        history.ShowResults();
+        break;
+    }
+}
+
+void DiceGuessGame(GameStats& diceGameStats, Wallet& wallet, WinLossHistory& history)
+{
+    if (diceGameStats.banned)
+    {
+        std::cout << "The guards won't let you in! You could try playing at another table...\n\n";
+        system("pause");
+        system("cls");
+        return;
+    }
+
+    if (!DiceGuessIntro(diceGameStats))
+    {
+        return;
+    }
+
+    do
+    {
+        DiceGuessGameLogic(DiceGuessConfig::diceMinRoll, DiceGuessConfig::diceMaxRoll, DiceGuessConfig::amtOfDice, diceGameStats, wallet, history);
+
+        if (diceGameStats.CashFlowCount > DiceGuessConfig::winLimit)
+        {
+            std::cout << "Uh-oh, you've caught the attention of the pit boss... The guards \"kindly\" escort you out out of the room\n\n";
+            system("pause");
+            system("cls");
+            diceGameStats.banned = true;
+            return;
+        }
+
+        if (wallet.balance <= CasinoConfig::gameOverCriteria)
+        {
+            GameOver();
+            return;
+        }
+
+    } while (PlayAgain());
+
+    return;
+}
+bool DiceGuessIntro(GameStats& diceGameStats)
+{
+    if (diceGameStats.CashFlowCount > DiceGuessConfig::winnerMsgThreshHold)
+    {
+        std::cout << "Great, my \"favorite\" guest has arrived.\n";
+    }
+    else if (diceGameStats.CashFlowCount < DiceGuessConfig::loserMsgThreshHold)
+    {
+        std::cout << "Good luck pal, seems like ya need it!\n";
+    }
+    else
+    {
+        std::cout << "Welcome to Guess the Number!\n";
+    }
+
+    bool showTutorial{ true };
+    int choice{};
+    while (showTutorial)
+    {
+        std::cout << "Do you need a tutorial on how to play?\n1: Yes\n2: No\n3: Go Back\n";
+        std::cin >> choice;
+        std::cin.clear();
+        std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
+        system("cls");
+
+        switch (choice)
+        {
+        case 1:
+        {
+            system("cls");
+            std::cout << "The rules are simple!\n"
+                << "Once you've placed your bet I'm going to roll two six-sided dice, and if you guess their "
+                << "combined total.....you win!\nSimple really, why don't you give it a try!\n\nThis game has a payout of 10:1.\n\n";
+            if (!PostTutorialPrompt())
+            {
+                return false;
+            }
+            return true;
+        }
+        case 2:
+        {
+            system("cls");
+            std::cout << "Very well! Please, place your bet to commence the game.\n\n";
+            showTutorial = false;
+            return true;
+        }
+        case 3:
+        {
+            return false;
+        }
+        }
+    }
+    return true;
+}
+void DiceGuessPrintResult(int userInput, int roll1, int roll2, int rollTotal) {
+    std::cout << "You entered ..." << userInput << "!\n\n"
+        << "And the dice rolled...\n" << roll1 << "..\n" << roll2 << "..\n" << "for a total of " << rollTotal << "!\n\n";
+}
+void DiceGuessGameLogic(int aMinRoll, int aMaxRoll, int anAmountOfDice, GameStats& diceGameStats, Wallet& wallet, WinLossHistory& history)
+{
+    int amountBet{ BetCheckpoint(wallet.balance) };
+    char result{};
+
+    while (true)
+    {
+        std::cout << "\nEnter a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice << ": ";
+        int userInput{};
+        std::cin >> userInput;
+        if (std::cin.fail())
+        {
+            std::cin.clear();
+            std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
+            system("cls");
+            std::cout << "That doesn't look like a number to me.......\n";
+            continue;
+        }
+
+        system("cls");
+        const int roll1{ DiceRoll(aMinRoll,aMaxRoll) };
+        const int roll2{ DiceRoll(aMinRoll,aMaxRoll) };
+        const int rollTotal{ roll1 + roll2 };
+
+
+        if (userInput > aMaxRoll * anAmountOfDice || userInput < aMinRoll * anAmountOfDice)
+        {
+            std::cout << "Hey... It has to be a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice
+                << "... Give it another try!\n";
+            continue;
+        }
+
+        if (rollTotal == userInput)
+        {
+            DiceGuessPrintResult(userInput, roll1, roll2, rollTotal);
+            std::cout << "Conratulations! You won " << amountBet * DiceGuessConfig::payoutRatio + amountBet << " Gil!\n\n";
+
+            wallet.balance += amountBet * DiceGuessConfig::payoutRatio;
+            diceGameStats.CashFlowCount += amountBet * DiceGuessConfig::payoutRatio;
+
+            std::cout << "Current balance is: " << wallet.balance << " Gil\n\n";
+            result = 'W';
+            history.SaveResult(result);
+            history.ShowResults();
+        }
+        else
+        {
+            DiceGuessPrintResult(userInput, roll1, roll2, rollTotal);
+            std::cout << "You lost " << amountBet << " Gil...";
+            std::cout << "Better luck next time!\n\n";
+
+            wallet.balance -= amountBet;
+            diceGameStats.CashFlowCount -= amountBet;
+
+            std::cout << "Current balance is: " << wallet.balance << " Gil\n\n";
+            result = 'L';
+            history.SaveResult(result);
+            history.ShowResults();
+        }
+        break;
+    }
 }
 
 int BetCheckpoint(int aBalance)
 {
     int wager{};
 
-    while (wager < 1 || wager > aBalance)
+    while (wager < CasinoConfig::minimumBetAmount || wager > aBalance)
     {
-        std::cout << "Current balance: " << aBalance << '\n';
-        std::cout << "Enter wager: ";
+        std::cout << "Current balance: " << aBalance << '\n'
+            << "Enter wager: ";
         std::cin >> wager;
         std::cin.clear();
-        std::cin.ignore(10000, '\n');
+        std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
 
-        if (wager < 1)
+        if (wager < CasinoConfig::minimumBetAmount)
         {
             system("cls");
-            std::cout << "You have to bet something, it's no fun otherwise!\n";
+            std::cout << "You have to bet at least " << CasinoConfig::minimumBetAmount << " Gil, it's no fun otherwise!\n";
         }
         else if (wager > aBalance)
         {
             system("cls");
-            std::cout <<"Don't think you've got enough cash for that!\n";
+            std::cout << "Don't think you've got enough cash for that!\n";
         }
     }
 
@@ -123,7 +537,7 @@ bool PlayAgain()
         std::cin >> choice;
         system("cls");
         std::cin.clear();
-        std::cin.ignore(10000, '\n');
+        std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
 
         switch (choice)
         {
@@ -146,353 +560,7 @@ bool PlayAgain()
         }
     }
 }
-
-void OddEvenGameIntro()
-{
-    if (globalCashFlowCounter[2] > 80)
-    {
-        std::cout << "You again? Bah...Welcome...\n";
-    }
-    else if (globalCashFlowCounter[2] < -40)
-    {
-        std::cout << "You're back? Great, never know when you'll strike it big heheh.\n";
-    }
-    else
-    {
-        std::cout << "Welcome to Odd or Even!\n";
-    }
-    int menuChoice{};
-
-    while (menuChoice < 1 || menuChoice > 3)
-    {
-        std::cout << "Do you need a tutorial on how to play?\n1: Yes\n2: No\n3: Go Back\n";
-        std::cin >> menuChoice;
-        std::cin.clear();
-        std::cin.ignore(10000, '\n');
-        system("cls");
-    }
-
-    switch (menuChoice)
-    {
-    case 1:
-    {
-        system("cls");
-        std::cout << "Very well!\n"
-            << "Once the bets are placed I'm going to roll two six-sided dice and"
-            << " you'll have to guess whether BOTH of the dice will roll odd or even numbers.\n"
-            << "Guess correctly and you win! "
-            << "However...if the dice happen to roll both an even AND an odd number... the house wins regardless of your choice!\n"
-            << "It's easier than you think, give it a try!\n\nThis game has a payout of 3:1.\n\n";
-        PostTutorialPrompt();
-        break;
-    }
-    case 2:
-    {
-        system("cls");
-        std::cout << "Very well! Please, place your bet to commence the game.\n\n";
-        break;
-    }
-    case 3:
-    {
-        main();
-        return;
-    }
-    }
-}
-void ChosenOddEven(int betChoice)
-{
-    bool chosenEven = true;
-
-    if (betChoice == 1)
-    {
-        chosenEven = false;
-    }
-
-    if (chosenEven == true)
-    {
-        std::cout << "You bet on the dice rolling even!\n";
-    }
-    else if (chosenEven == false)
-    {
-        std::cout << "You bet on the dice rolling odd!\n";
-    }
-}
-void OddEvenGamePrintResult(int rollA, int rollB, int inputFromUser)
-{
-    ChosenOddEven(inputFromUser);
-    std::cout << "\nThe dice rolled...\n" << rollA << ".." << '\n' << rollB << ".." << "\n\n";
-}
-void OddEvenGame(int aMinRoll, int aMaxRoll)
-{
-    if (globalTableBanCheck[2] == true)
-    {
-        std::cout << "The guards won't let you in! You could try playing at another table...\n\n";
-        system("pause");
-        system("cls");
-        Lobby();
-        return;
-    }
-    int betChoice{};
-    OddEvenGameIntro();
-
-    do
-    {
-        bool wrongInput{ true };
-        int amountBet{ BetCheckpoint(globalBalance) };
-        char result{};
-
-        while (wrongInput == true)
-        {
-            std::cout << "\nWhat will you be betting on?\n1: Odd Dice\n2: Even Dice\n";
-            std::cin >> betChoice;
-            if (std::cin.fail() || betChoice < 1 || betChoice > 2)
-            {
-                std::cin.clear();
-                std::cin.ignore(10000, '\n');
-                system("cls");
-                std::cout << "That's not a valid choice.\n";
-                wrongInput = true;
-            }
-            else
-            {
-                int rollMin{ aMinRoll }, rollMax{ aMaxRoll };
-                int roll1{ DiceRoll(rollMin,rollMax) };
-                int roll2{ DiceRoll(rollMin,rollMax) };
-
-                if (betChoice == 1 && roll1 % 2 != 0 && roll2 % 2 != 0)
-                {
-                    system("cls");
-                    OddEvenGamePrintResult(roll1, roll2, betChoice);
-                    std::cout << "Conratulations! You won " << amountBet * 3 << " Gil!\n\n";
-                    globalBalance += amountBet * 2;
-                    globalCashFlowCounter[2] += amountBet*2;
-                    std::cout << "Current balance is: " << globalBalance << " Gil\n\n";
-                    result = 'W';
-                    SaveResult(result);
-                    ShowResults();
-                }
-                else if (betChoice == 1 && roll1 % 2 == 0 && roll2 % 2 == 0)
-                {
-                    system("cls");
-                    OddEvenGamePrintResult(roll1, roll2, betChoice);
-                    std::cout << "You lost!\n\n";
-                    globalBalance -= amountBet;
-                    globalCashFlowCounter[2] -= amountBet;
-                    std::cout << "Current balance is: " << globalBalance << " Gil\n\n";
-                    result = 'L';
-                    SaveResult(result);
-                    ShowResults();
-                }
-                else if (betChoice == 2 && roll1 % 2 == 0 && roll2 % 2 == 0)
-                {
-                    system("cls");
-                    OddEvenGamePrintResult(roll1, roll2, betChoice);
-                    std::cout << "Conratulations! You won " << amountBet * 3 << " Gil!\n\n";
-                    globalBalance += amountBet * 2;
-                    globalCashFlowCounter[2] += amountBet * 2;
-                    std::cout << "Current balance is: " << globalBalance << " Gil\n\n";
-                    result = 'W';
-                    SaveResult(result);
-                    ShowResults();
-                }
-                else if (betChoice == 2 && roll1 % 2 != 0 && roll2 % 2 != 0)
-                {
-                    system("cls");
-                    OddEvenGamePrintResult(roll1, roll2, betChoice);
-                    std::cout << "You lost!\n\n";
-                    globalBalance -= amountBet;
-                    globalCashFlowCounter[2] -= amountBet;
-                    std::cout << "Current balance is: " << globalBalance << " Gil\n\n";
-                    result = 'L';
-                    SaveResult(result);
-                    ShowResults();
-                }
-                else
-                {
-                    system("cls");
-                    OddEvenGamePrintResult(roll1, roll2, betChoice);
-                    std::cout << "Both odd and even! You lost!\n";
-                    globalBalance -= amountBet;
-                    globalCashFlowCounter[2] -= amountBet;
-                    std::cout << "Current balance is: " << globalBalance << " Gil\n\n";
-                    result = 'L';
-                    SaveResult(result);
-                    ShowResults();
-                }
-                wrongInput = false;
-            }
-        }
-        if (globalCashFlowCounter[2] > 125)
-        {
-            std::cout << "Uh-oh, you've caught the attention of the pit boss... The guards \"kindly\" escort you out out of the room\n\n";
-            system("pause");
-            system("cls");
-            globalTableBanCheck[2] = true;
-            Lobby();
-            return;
-        }
-        if (globalBalance < 1)
-        {
-            GameOver();
-            return;
-        }
-    } while (PlayAgain());
-    globalBalance = globalBalance;
-    main();
-    return;
-}
-
-void DiceGameIntro()
-{
-    if (globalTableBanCheck[1] == true)
-    {
-        std::cout << "The guards won't let you in! You could try playing at another table...\n\n";
-        system("pause");
-        system("cls");
-        Lobby();
-        return;
-    }
-
-    if (globalCashFlowCounter[1] > 70)
-    {
-        std::cout << "Great, my \"favorite\" guest has arrived.\n";
-    }
-    else if (globalCashFlowCounter[1] < -40)
-    {
-        std::cout << "Good luck pal, seems ya need it!\n";
-    }
-    else
-    {
-        std::cout << "Welcome to Odd or Even!\n";
-    }
-    int choice{};
-    while (choice < 1 || choice > 3)
-    {
-        std::cout << "Do you need a tutorial on how to play?\n1: Yes\n2: No\n3: Go Back\n";
-        std::cin >> choice;
-        std::cin.clear();
-        std::cin.ignore(10000, '\n');
-        system("cls");
-    }
-
-    switch (choice)
-    {
-        case 1:
-        {
-            system("cls");
-            std::cout << "The rules are simple!\n"
-                      << "Once you've placed your bet I'm going to roll two six-sided dice, and if you guess their "
-                      << "combined total.....you win!\nSimple really, why don't you give it a try!\n\nThis game has a payout of 10:1.\n\n";
-            PostTutorialPrompt();
-            break;
-        }
-        case 2:
-        {
-            system("cls");
-            std::cout << "Very well! Please, place your bet to commence the game.\n\n";
-            break;
-        }
-        case 3:
-        {
-            main();
-            return;
-        }
-    }
-}
-void DiceGuessGameLogic(int aMinRoll, int aMaxRoll, int anAmountOfDice)
-{
-    bool wrongInput{ true };
-    int amountBet{ BetCheckpoint(globalBalance) };
-    char result{};
-
-    while (wrongInput == true)
-    {
-        std::cout << "\nEnter a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice << ": ";
-        int userInput{};
-        std::cin >> userInput;
-        if (std::cin.fail())
-        {
-            std::cin.clear();
-            std::cin.ignore(10000, '\n');
-            system("cls");
-            std::cout << "That doesn't look like a number to me.......\n";
-            wrongInput = true;
-        }
-        else
-        {
-            system("cls");
-            int rollMin{ aMinRoll }, rollMax{ aMaxRoll };
-            int amountOfRolls{ anAmountOfDice };
-            int roll1{ DiceRoll(rollMin,rollMax) };
-            int roll2{ DiceRoll(rollMin,rollMax) };
-            int rollTotal{ roll1 + roll2 };
-
-            if (userInput <= rollMax * amountOfRolls && userInput >= rollMin * amountOfRolls && rollTotal != userInput)
-            {
-                std::cout << "You entered ..." << userInput << "!\n\n";
-                std::cout << "And the dice rolled...\n" << roll1 << ".." << '\n' << roll2 << ".." << "\nfor a total of " << rollTotal << "!\n\n";
-                std::cout << "You lost " << amountBet << " Gil...";
-                std::cout << "Better luck next time!\n\n";
-                globalBalance -= amountBet;
-                globalCashFlowCounter[1] -= amountBet;
-                std::cout << "Current balance is: " << globalBalance << " Gil\n\n";
-                result = 'L';
-                SaveResult(result);
-                ShowResults();
-                wrongInput = false;
-            }
-            else if (rollTotal == userInput)
-            {
-                std::cout << "You entered ..." << userInput << "!\n\n";
-                std::cout << "And the dice rolled...\n" << roll1 << ".." << '\n' << roll2 << ".." << "\nfor a total of " << rollTotal << "!\n\n";
-                std::cout << "Conratulations! You won " << amountBet * 10 << " Gil!\n\n";
-                globalBalance += amountBet*9;
-                globalCashFlowCounter[1] += amountBet*9;
-                std::cout << "Current balance is: " << globalBalance << " Gil\n\n";
-                result = 'W';
-                SaveResult(result);
-                ShowResults();
-                wrongInput = false;
-            }
-            else if (userInput > rollMax * amountOfRolls || userInput < rollMin * amountOfRolls)
-            {
-                std::cout << "Hey... It has to be a number between " << aMinRoll * anAmountOfDice << " and " << aMaxRoll * anAmountOfDice
-                    << "... Give it another try!\n";
-                wrongInput = true;
-            }
-        }
-    }
-
-}
-void DiceGuessGame()
-{
-    DiceGameIntro();
-    do
-    {
-        {
-            DiceGuessGameLogic(1, 6, 2);
-        }
-        if (globalCashFlowCounter[1] > 175)
-        {
-            std::cout << "Uh-oh, you've caught the attention of the pit boss... The guards \"kindly\" escort you out out of the room\n\n";
-            system("pause");
-            system("cls");
-            globalTableBanCheck[1] = true;
-            Lobby();
-            return;
-        }
-        if (globalBalance < 1)
-        {
-            GameOver();
-            return;
-        }
-
-    } while (PlayAgain());
-    main();
-    return;
-}
-
-void PostTutorialPrompt()
+bool PostTutorialPrompt()
 {
     int choice{};
     while (choice < 1 || choice > 2)
@@ -500,24 +568,23 @@ void PostTutorialPrompt()
         std::cout << "Play the game?\n1: Yes\n2: No\n";
         std::cin >> choice;
         std::cin.clear();
-        std::cin.ignore(10000, '\n');
+        std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
         system("cls");
     }
 
     switch (choice)
     {
-        case 1:
-        {
-            break;
-        }
-        case 2:
-        {
-            main();
-            return;
-        }
+    case 1:
+    {
+        return true;
     }
+    case 2:
+    {
+        return false;
+    }
+    }
+    return true;
 }
-
 void GameOver()
 {
     system("pause");
@@ -525,30 +592,14 @@ void GameOver()
     system("pause");
 }
 
-void SaveResult(char aRoundResult)
+
+
+int DiceRoll(int aLowestSide, int aHighestSide)
 {
-    globalHistory[globalHistorySlot] = aRoundResult;
-    globalHistorySlot = (globalHistorySlot + 1) % 5;
+    std::random_device rng;
+    std::mt19937 el(rng());
+    std::uniform_int_distribution<int> uniform_dist(aLowestSide, aHighestSide);
+    const int roll{ uniform_dist(el) };
+    return roll;
 }
 
-void ShowResults() {
-    std::cout << "Recent round history\n\n";
-
-    for (int i{ 0 }; i < 5; ++i)
-    {
-        std::cout << "Round " << i + 1 << ": ";
-        if (globalHistory[i] == ' ')
-        {
-            std::cout << "-----\n";
-        }
-        else if (globalHistory[i] == 'W')
-        {
-            std::cout << "Won\n";
-        }
-        else if (globalHistory[i] == 'L')
-        {
-            std::cout << "Lost";
-            std::cout << '\n';
-        }
-    }
-}
