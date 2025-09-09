@@ -5,39 +5,11 @@ struct Wallet
 {
     int balance{ 50 };
 };
-
 struct GameStats
 {
     int CashFlowCount{ 0 };
     bool banned{ false };
 };
-
-namespace CasinoConfig
-{
-    constexpr int inputBufferSize{ 10000 };
-    constexpr int gameOverCriteria{ 0 };
-    constexpr int minimumBetAmount{ 5 };
-}
-namespace OddEvenConfig
-{
-    constexpr int winLimit{ 125 };
-    constexpr int diceMinRoll{ 1 };
-    constexpr int diceMaxRoll{ 6 };
-    constexpr int payoutRatio{ 2 };
-    constexpr int winnerMsgThreshhold{ 80 };
-    constexpr int loserMsgThreshhold{ -40 };
-}
-namespace DiceGuessConfig
-{
-    constexpr int winLimit{ 175 };
-    constexpr int diceMinRoll{ 1 };
-    constexpr int diceMaxRoll{ 6 };
-    constexpr int amtOfDice{ 2 };
-    constexpr int payoutRatio{ 9 };
-    constexpr int winnerMsgThreshHold{ 70 };
-    constexpr int loserMsgThreshHold{ -40 };
-}
-
 struct WinLossHistory
 {
     static constexpr int historySize{ 5 };
@@ -75,28 +47,65 @@ struct WinLossHistory
     }
 };
 
+namespace CasinoConfig
+{
+    constexpr int inputBufferSize{ 10000 };
+    constexpr int gameOverCriteria{ 0 };
+    constexpr int minimumBetAmount{ 5 };
+}
+namespace OddEvenConfig
+{
+    constexpr int winLimit{ 125 };
+    constexpr int diceMinRoll{ 1 };
+    constexpr int diceMaxRoll{ 6 };
+    constexpr int payoutRatio{ 2 };
+    constexpr int winnerMsgThreshhold{ 80 };
+    constexpr int loserMsgThreshhold{ -40 };
+}
+namespace DiceGuessConfig
+{
+    constexpr int winLimit{ 175 };
+    constexpr int diceMinRoll{ 1 };
+    constexpr int diceMaxRoll{ 6 };
+    constexpr int amtOfDice{ 2 };
+    constexpr int payoutRatio{ 9 };
+    constexpr int winnerMsgThreshHold{ 70 };
+    constexpr int loserMsgThreshHold{ -40 };
+}
+
+enum class LobbyChoice
+{
+    DiceGuessGame = 1,
+    OddEvenGame,
+    PlayHistory,
+    QuitGame,
+    Count = 5
+};
+enum class YesNoPrompt
+{
+    Yes = 1,
+    No,
+    Back,
+};
 
 int DiceRoll(int aLowestSide, int aHighestSide);
 int BetCheckpoint(int aBalance);
-bool PlayAgain();
-void OddEvenGamePrintResult(int aRoll, int aRoll2, int anInputFromUser);
-void OddEvenGame(GameStats& gameStats, Wallet& wallet, WinLossHistory& history);
-bool OddEvenGameIntro(GameStats& gameStats);
-void OddEvenGameLogic(int aMinRoll, int aMaxRoll, GameStats& oddEvenStats, Wallet& wallet, WinLossHistory& history);
-void DiceGuessGame(GameStats& gameStats, Wallet& wallet, WinLossHistory& history);
-void DiceGuessPrintResult(int userInput, int roll1, int roll2, int rollTotal);
-void DiceGuessGameLogic(int aMinRoll, int aMaxRoll, int anAmountOfDice, GameStats& diceGameStats, Wallet& wallet, WinLossHistory& history);
-bool DiceGuessIntro(GameStats& gameStats);
-void Lobby(Wallet& wallet, WinLossHistory& history, GameStats& oddEvenStats, GameStats& diceGuessStats);
 bool PostTutorialPrompt();
+bool PlayAgain();
 void GameOver();
 
+void OddEvenGame(GameStats& gameStats, Wallet& wallet, WinLossHistory& history);
+bool OddEvenGameIntro(GameStats& gameStats);
+void OddEvenGamePrintResult(int aRoll, int aRoll2, int anInputFromUser);
+void OddEvenGameLogic(int aMinRoll, int aMaxRoll, GameStats& oddEvenStats, Wallet& wallet, WinLossHistory& history);
 
-//remove glob alhistory for struct, reference, function, namespace
+void DiceGuessGame(GameStats& gameStats, Wallet& wallet, WinLossHistory& history);
+bool DiceGuessIntro(GameStats& gameStats);
+void DiceGuessPrintResult(int userInput, int roll1, int roll2, int rollTotal);
+void DiceGuessGameLogic(int aMinRoll, int aMaxRoll, int anAmountOfDice, GameStats& diceGameStats, Wallet& wallet, WinLossHistory& history);
 
-//2.0implement enums (prefer scoping them within namespaces or classes for less pollution)for ex. choice based prompts (menus, yes/no)
-//enumerated types related to a class inside the scope region of the class
-//enums for choice switches
+void Lobby(Wallet& wallet, WinLossHistory& history, GameStats& oddEvenStats, GameStats& diceGuessStats);
+
 
 //4.0divide functions into separate files and headers
 
@@ -132,20 +141,20 @@ void Lobby(Wallet& wallet, WinLossHistory& history, GameStats& oddEvenStats, Gam
         std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
         system("cls");
 
-        switch (choice)
+        switch (static_cast<LobbyChoice>(choice))
         {
-        case 1:
+        case LobbyChoice::DiceGuessGame:
             DiceGuessGame(diceGuessStats, wallet, history);
             break;
-        case 2:
+        case LobbyChoice::OddEvenGame:
             OddEvenGame(oddEvenStats, wallet, history);
             break;
-        case 3:
+        case LobbyChoice::PlayHistory:
             history.ShowResults();
             system("pause");
             system("cls");
             break;
-        case 4:
+        case LobbyChoice::QuitGame:
             std::cout << "Thanks for playing!\n\nYou left the casino with " << wallet.balance << " Gil in your pocket.\n";
             showMenu = false;
             system("pause");
@@ -217,9 +226,9 @@ bool OddEvenGameIntro(GameStats& oddEvenStats)
         system("cls");
     }
 
-    switch (menuChoice)
+    switch (static_cast<YesNoPrompt>(menuChoice))
     {
-    case 1:
+    case YesNoPrompt::Yes:
     {
         system("cls");
         std::cout << "Very well!\n"
@@ -234,13 +243,13 @@ bool OddEvenGameIntro(GameStats& oddEvenStats)
         }
         return true;
     }
-    case 2:
+    case YesNoPrompt::No:
     {
         system("cls");
         std::cout << "Very well! Please, place your bet to commence the game.\n\n";
         return true;
     }
-    case 3:
+    case YesNoPrompt::Back:
     {
         return false;
     }
@@ -293,7 +302,7 @@ void OddEvenGameLogic(int aMinRoll, int aMaxRoll, GameStats& oddEvenStats, Walle
         const bool roll1IsOdd = !roll1IsEven;
         const bool roll2IsOdd = !roll2IsEven;
 
-        if (betChoice == 1 && roll1IsOdd && roll2IsOdd)
+        if ((betChoice == 1 && roll1IsOdd && roll2IsOdd) || (betChoice == 2 && roll1IsEven && roll2IsEven))
         {
             system("cls");
             OddEvenGamePrintResult(roll1, roll2, betChoice);
@@ -310,15 +319,6 @@ void OddEvenGameLogic(int aMinRoll, int aMaxRoll, GameStats& oddEvenStats, Walle
             wallet.balance -= amountBet;
             oddEvenStats.CashFlowCount -= amountBet;
             result = 'L';
-        }
-        else if (betChoice == 2 && roll1IsEven && roll2IsEven)
-        {
-            system("cls");
-            OddEvenGamePrintResult(roll1, roll2, betChoice);
-            std::cout << "Conratulations! You won " << amountBet * OddEvenConfig::payoutRatio + amountBet << " Gil!\n\n";
-            wallet.balance += amountBet * OddEvenConfig::payoutRatio;
-            oddEvenStats.CashFlowCount += amountBet * OddEvenConfig::payoutRatio;
-            result = 'W';
         }
         else
         {
@@ -400,9 +400,9 @@ bool DiceGuessIntro(GameStats& diceGameStats)
         std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
         system("cls");
 
-        switch (choice)
+        switch (static_cast<YesNoPrompt>(choice))
         {
-        case 1:
+        case YesNoPrompt::Yes:
         {
             system("cls");
             std::cout << "The rules are simple!\n"
@@ -414,14 +414,14 @@ bool DiceGuessIntro(GameStats& diceGameStats)
             }
             return true;
         }
-        case 2:
+        case YesNoPrompt::No:
         {
             system("cls");
             std::cout << "Very well! Please, place your bet to commence the game.\n\n";
             showTutorial = false;
             return true;
         }
-        case 3:
+        case YesNoPrompt::Back:
         {
             return false;
         }
@@ -496,6 +496,14 @@ void DiceGuessGameLogic(int aMinRoll, int aMaxRoll, int anAmountOfDice, GameStat
     }
 }
 
+int DiceRoll(int aLowestSide, int aHighestSide)
+{
+    std::random_device rng;
+    std::mt19937 el(rng());
+    std::uniform_int_distribution<int> uniform_dist(aLowestSide, aHighestSide);
+    const int roll{ uniform_dist(el) };
+    return roll;
+}
 int BetCheckpoint(int aBalance)
 {
     int wager{};
@@ -527,39 +535,6 @@ int BetCheckpoint(int aBalance)
     }
     return wager;
 }
-
-bool PlayAgain()
-{
-    while (true)
-    {
-        char choice{};
-        std::cout << "\nPlay again? Enter y/n: \n";
-        std::cin >> choice;
-        system("cls");
-        std::cin.clear();
-        std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
-
-        switch (choice)
-        {
-        case 'y':
-        {
-            return true;
-        }
-        case 'Y':
-        {
-            return true;
-        }
-        case 'n':
-        {
-            return false;
-        }
-        case 'N':
-        {
-            return false;
-        }
-        }
-    }
-}
 bool PostTutorialPrompt()
 {
     int choice{};
@@ -572,18 +547,42 @@ bool PostTutorialPrompt()
         system("cls");
     }
 
-    switch (choice)
+    switch (static_cast<YesNoPrompt>(choice))
     {
-    case 1:
+    case YesNoPrompt::Yes:
     {
         return true;
     }
-    case 2:
+    case YesNoPrompt::No:
     {
         return false;
     }
     }
     return true;
+}
+bool PlayAgain()
+{
+    while (true)
+    {
+        int choice{};
+        std::cout << "\nPlay again?\n1: Yes\n2: No";
+        std::cin >> choice;
+        system("cls");
+        std::cin.clear();
+        std::cin.ignore(CasinoConfig::inputBufferSize, '\n');
+
+        switch (static_cast<YesNoPrompt>(choice))
+        {
+        case YesNoPrompt::Yes:
+        {
+            return true;
+        }
+        case YesNoPrompt::No:
+        {
+            return false;
+        }
+        }
+    }
 }
 void GameOver()
 {
@@ -594,12 +593,4 @@ void GameOver()
 
 
 
-int DiceRoll(int aLowestSide, int aHighestSide)
-{
-    std::random_device rng;
-    std::mt19937 el(rng());
-    std::uniform_int_distribution<int> uniform_dist(aLowestSide, aHighestSide);
-    const int roll{ uniform_dist(el) };
-    return roll;
-}
 
